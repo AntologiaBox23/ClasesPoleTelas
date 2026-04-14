@@ -1,0 +1,530 @@
+
+<style>
+*{box-sizing:border-box;margin:0;padding:0}
+body{font-family:var(--font-sans,sans-serif);background:var(--color-background-tertiary);color:var(--color-text-primary)}
+.app{max-width:920px;margin:0 auto;padding:1rem}
+.hidden{display:none!important}
+.nav{display:flex;align-items:center;justify-content:space-between;padding:.75rem 1.25rem;background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);margin-bottom:.75rem}
+.nav-brand{display:flex;flex-direction:column}
+.nav-brand-name{font-size:14px;font-weight:500;color:var(--color-text-primary)}
+.nav-brand-sub{font-size:10px;color:#D4537E;letter-spacing:.04em}
+.nav-tabs{display:flex;gap:4px}
+.nav-tab{padding:6px 14px;border-radius:var(--border-radius-md);font-size:13px;cursor:pointer;border:none;background:transparent;color:var(--color-text-secondary)}
+.nav-tab.active{background:var(--color-background-secondary);color:var(--color-text-primary);font-weight:500}
+.nav-user{font-size:12px;color:var(--color-text-secondary);display:flex;align-items:center;gap:8px}
+.avatar{width:30px;height:30px;border-radius:50%;background:#FBEAF0;color:#72243E;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:500;flex-shrink:0}
+.sheets-banner{background:#E1F5EE;border:0.5px solid #9FE1CB;border-radius:var(--border-radius-md);padding:.6rem 1rem;margin-bottom:.75rem;font-size:12px;color:#0F6E56;display:flex;align-items:center;gap:8px}
+.dot{width:7px;height:7px;border-radius:50%;background:#1D9E75;flex-shrink:0}
+.card{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:1.25rem;margin-bottom:.75rem}
+.card-title{font-size:14px;font-weight:500;margin-bottom:1rem}
+.metric-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:.75rem}
+.metric{background:var(--color-background-secondary);border-radius:var(--border-radius-md);padding:.75rem 1rem}
+.metric-label{font-size:11px;color:var(--color-text-secondary);margin-bottom:3px}
+.metric-value{font-size:22px;font-weight:500}
+.pink{color:#D4537E} .teal{color:#1D9E75} .amber{color:#BA7517} .coral{color:#D85A30} .purple{color:#7F77DD}
+.section-tabs{display:flex;gap:4px;margin-bottom:.75rem;flex-wrap:wrap}
+.section-tab{padding:5px 14px;border-radius:var(--border-radius-md);font-size:13px;cursor:pointer;border:0.5px solid var(--color-border-tertiary);background:transparent;color:var(--color-text-secondary)}
+.section-tab.active{background:#D4537E;color:#fff;border-color:#D4537E}
+.table-wrap{overflow-x:auto}
+table{width:100%;border-collapse:collapse;font-size:13px;table-layout:fixed}
+th{text-align:left;padding:7px 10px;border-bottom:0.5px solid var(--color-border-tertiary);color:var(--color-text-secondary);font-weight:500;white-space:nowrap}
+td{padding:7px 10px;border-bottom:0.5px solid var(--color-border-tertiary);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:var(--color-background-secondary)}
+.badge{display:inline-block;padding:2px 9px;border-radius:20px;font-size:11px;font-weight:500;white-space:nowrap}
+.b-active{background:#E1F5EE;color:#0F6E56}
+.b-low{background:#FAEEDA;color:#854F0B}
+.b-done{background:#FCEBEB;color:#A32D2D}
+.b-sched{background:#FBEAF0;color:#72243E}
+.b-pole{background:#FBEAF0;color:#72243E}
+.b-acro{background:#EEEDFE;color:#3C3489}
+.b-gap{background:#E1F5EE;color:#085041}
+.b-pierna{background:#FAEEDA;color:#633806}
+.btn{padding:7px 16px;border-radius:var(--border-radius-md);font-size:13px;cursor:pointer;border:0.5px solid var(--color-border-secondary);background:transparent;color:var(--color-text-primary);font-weight:500}
+.btn:hover{background:var(--color-background-secondary)}
+.btn-primary{background:#D4537E;color:#fff;border-color:#D4537E}
+.btn-primary:hover{background:#993556;border-color:#993556}
+.btn-sm{padding:4px 10px;font-size:12px}
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.form-group{display:flex;flex-direction:column;gap:4px}
+.form-group label{font-size:12px;color:var(--color-text-secondary)}
+.form-group.full{grid-column:1/-1}
+input,select,textarea{padding:7px 10px;border:0.5px solid var(--color-border-secondary);border-radius:var(--border-radius-md);background:var(--color-background-primary);color:var(--color-text-primary);font-size:13px;font-family:inherit;width:100%}
+input:focus,select:focus{outline:none;border-color:#D4537E;box-shadow:0 0 0 2px #FBEAF0}
+.progress-bar{height:5px;background:var(--color-background-secondary);border-radius:3px;overflow:hidden;margin-top:3px}
+.progress-fill{height:100%;border-radius:3px}
+.pf-green{background:#1D9E75}.pf-amber{background:#BA7517}.pf-red{background:#E24B4A}
+.schedule-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:4px}
+.day-slot{border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:5px 3px;text-align:center;cursor:pointer;font-size:10px;min-height:70px;transition:background .15s}
+.day-slot:hover{background:var(--color-background-secondary)}
+.day-slot.ds-booked{background:#FBEAF0;border-color:#ED93B1}
+.day-slot.ds-full{background:#FCEBEB;border-color:#F7C1C1;cursor:not-allowed;opacity:.7}
+.day-slot.ds-avail{background:var(--color-background-primary)}
+.day-name{font-weight:500;color:var(--color-text-secondary);font-size:10px;margin-bottom:2px}
+.overlay{display:flex;align-items:flex-start;justify-content:center;padding:2rem 1rem;background:rgba(0,0,0,.35);min-height:400px}
+.modal{background:var(--color-background-primary);border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-lg);padding:1.5rem;width:100%;max-width:460px}
+.modal-title{font-size:15px;font-weight:500;margin-bottom:1rem}
+.modal-footer{display:flex;gap:8px;justify-content:flex-end;margin-top:1.25rem}
+.pack-card{border:0.5px solid var(--color-border-tertiary);border-radius:var(--border-radius-md);padding:1rem;margin-bottom:.75rem}
+.pack-name{font-weight:500;font-size:14px;margin-bottom:.5rem}
+.pack-detail{font-size:12px;color:var(--color-text-secondary);display:flex;justify-content:space-between;margin-bottom:3px}
+.toast-area{min-height:0}
+.toast{background:#3C3489;color:#fff;padding:.65rem 1.1rem;border-radius:var(--border-radius-md);font-size:13px;margin-top:.5rem;display:none}
+.toast.show{display:block}
+@media(max-width:600px){.metric-grid{grid-template-columns:repeat(2,1fr)}.form-grid{grid-template-columns:1fr}.schedule-grid{grid-template-columns:repeat(4,1fr)}}
+</style>
+
+<div class="app">
+<h2 class="sr-only" style="position:absolute;width:1px;height:1px;overflow:hidden">Antologia Pole Sport y Acrotelas — sistema de gestión de clases</h2>
+
+<nav class="nav">
+  <div class="nav-brand">
+    <span class="nav-brand-name">Antologia</span>
+    <span class="nav-brand-sub">Pole Sport &amp; Acrotelas</span>
+  </div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="switchRole('admin',this)">Admin</button>
+    <button class="nav-tab" onclick="switchRole('student',this)">Portal alumna</button>
+  </div>
+  <div class="nav-user">
+    <div class="avatar" id="nav-avatar">AD</div>
+    <span id="nav-name">Administrador</span>
+  </div>
+</nav>
+
+<div class="sheets-banner">
+  <div class="dot"></div>
+  <span>Google Sheets conectado &middot; <strong>Antologia_DB</strong> &middot; hojas: Alumnas · Paquetes · Pagos · Clases</span>
+</div>
+
+<div id="toast" class="toast"></div>
+
+<!-- ===== ADMIN ===== -->
+<div id="panel-admin">
+  <div class="metric-grid">
+    <div class="metric"><div class="metric-label">Alumnas activas</div><div class="metric-value pink" id="m-alumnas">4</div></div>
+    <div class="metric"><div class="metric-label">Clases esta semana</div><div class="metric-value teal" id="m-semana">14</div></div>
+    <div class="metric"><div class="metric-label">Paquetes activos</div><div class="metric-value amber" id="m-paquetes">4</div></div>
+    <div class="metric"><div class="metric-label">Por vencer</div><div class="metric-value coral" id="m-vencer">2</div></div>
+  </div>
+
+  <div class="section-tabs">
+    <button class="section-tab active" onclick="adminTab('alumnas',this)">Alumnas</button>
+    <button class="section-tab" onclick="adminTab('pagos',this)">Pagos</button>
+    <button class="section-tab" onclick="adminTab('agenda',this)">Agenda</button>
+    <button class="section-tab" onclick="adminTab('sheets',this)">Google Sheets</button>
+  </div>
+
+  <!-- Alumnas -->
+  <div id="tab-alumnas" class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+      <span class="card-title" style="margin:0">Alumnas registradas</span>
+      <button class="btn btn-primary btn-sm" onclick="showModal('m-nueva')">+ Nueva alumna</button>
+    </div>
+    <div class="table-wrap">
+      <table style="table-layout:auto">
+        <thead><tr><th>Nombre</th><th>Teléfono</th><th>Paquete</th><th>Progreso</th><th>Estado</th><th></th></tr></thead>
+        <tbody id="tb-alumnas"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Pagos -->
+  <div id="tab-pagos" class="card hidden">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1rem">
+      <span class="card-title" style="margin:0">Registro de pagos</span>
+      <button class="btn btn-primary btn-sm" onclick="showModal('m-pago')">+ Registrar pago</button>
+    </div>
+    <div class="table-wrap">
+      <table style="table-layout:auto">
+        <thead><tr><th>Fecha</th><th>Alumna</th><th>Paquete</th><th>Monto</th><th>Método</th><th>Estado</th></tr></thead>
+        <tbody id="tb-pagos"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Agenda -->
+  <div id="tab-agenda" class="card hidden">
+    <div class="card-title">Agenda semanal — 14 al 20 abr 2026</div>
+    <div class="schedule-grid" id="agenda-admin"></div>
+    <div style="display:flex;gap:14px;margin-top:.75rem;font-size:11px;color:var(--color-text-secondary)">
+      <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#FBEAF0;border:0.5px solid #ED93B1;margin-right:4px"></span>Con reservas</span>
+      <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;background:#FCEBEB;border:0.5px solid #F7C1C1;margin-right:4px"></span>Lleno</span>
+      <span><span style="display:inline-block;width:10px;height:10px;border-radius:2px;border:0.5px solid var(--color-border-tertiary);margin-right:4px"></span>Disponible</span>
+    </div>
+  </div>
+
+  <!-- Sheets -->
+  <div id="tab-sheets" class="card hidden">
+    <div class="card-title">Configurar Google Sheets</div>
+    <p style="font-size:13px;color:var(--color-text-secondary);margin-bottom:1rem;line-height:1.7">Sigue estos pasos para conectar la app con tu hoja de Google Sheets real:</p>
+    <ol style="font-size:13px;line-height:2.2;padding-left:1.25rem;color:var(--color-text-primary)">
+      <li>Crea una hoja en Google Sheets llamada <strong>Antologia_DB</strong></li>
+      <li>Crea 4 pestañas: <code style="background:var(--color-background-secondary);padding:1px 6px;border-radius:4px">Alumnas</code> · <code style="background:var(--color-background-secondary);padding:1px 6px;border-radius:4px">Paquetes</code> · <code style="background:var(--color-background-secondary);padding:1px 6px;border-radius:4px">Pagos</code> · <code style="background:var(--color-background-secondary);padding:1px 6px;border-radius:4px">Clases</code></li>
+      <li>Ve a <strong>Extensiones → Apps Script</strong> y pega el código del Web App</li>
+      <li>Publica como Web App con acceso "Cualquier usuario"</li>
+      <li>Pega la URL del Web App abajo</li>
+    </ol>
+    <div style="display:flex;gap:8px;align-items:flex-end;margin-top:1.25rem">
+      <div class="form-group" style="flex:1"><label>URL del Web App</label><input id="sheets-url" type="text" placeholder="https://script.google.com/macros/s/..."></div>
+      <button class="btn btn-primary" onclick="saveSheetUrl()">Guardar</button>
+    </div>
+    <div style="margin-top:.75rem">
+      <button class="btn" onclick="sendPrompt('Genera el código completo de Google Apps Script para conectar Antologia Pole Sport con Google Sheets, con las pestañas Alumnas, Paquetes, Pagos y Clases, y con las disciplinas Pole, Acrotelas, GAP y Pierna')">Ver código Apps Script ↗</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== PORTAL ALUMNA ===== -->
+<div id="panel-student" class="hidden">
+  <div class="card">
+    <div style="display:flex;align-items:center;gap:12px;margin-bottom:1rem;flex-wrap:wrap">
+      <div class="avatar" style="width:46px;height:46px;font-size:15px" id="s-avatar">MP</div>
+      <div>
+        <div style="font-size:15px;font-weight:500" id="s-name">María Pérez</div>
+        <div style="font-size:12px;color:var(--color-text-secondary)" id="s-sub">Alumna activa</div>
+      </div>
+      <div style="margin-left:auto">
+        <select style="font-size:12px;width:auto" onchange="switchStudent(this.value)" id="s-selector"></select>
+      </div>
+    </div>
+
+    <div class="pack-card" id="pack-info">
+      <div class="pack-name" id="pack-name-disp">Pack 12 clases</div>
+      <div class="pack-detail"><span>Clases usadas</span><span id="pack-used" style="font-weight:500">7 / 12</span></div>
+      <div class="progress-bar"><div class="progress-fill pf-amber" id="pack-bar" style="width:58%"></div></div>
+      <div class="pack-detail" style="margin-top:8px"><span>Vence</span><span id="pack-vence" style="color:#BA7517;font-weight:500">30 abr 2026</span></div>
+    </div>
+
+    <div class="card-title">Historial de clases</div>
+    <div class="table-wrap">
+      <table style="table-layout:auto">
+        <thead><tr><th>Fecha</th><th>Disciplina</th><th>Instructor</th><th>Estado</th></tr></thead>
+        <tbody id="tb-mis-clases"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <div class="card">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:.75rem">
+      <span class="card-title" style="margin:0">Programar clase</span>
+      <span id="s-restantes" style="font-size:12px;color:var(--color-text-secondary)">5 clases disponibles</span>
+    </div>
+    <div class="schedule-grid" id="agenda-student"></div>
+    <p style="margin-top:.75rem;font-size:12px;color:var(--color-text-secondary)">Selecciona un día disponible para reservar tu clase.</p>
+  </div>
+</div>
+
+<!-- MODALES -->
+<div id="m-nueva" class="hidden"><div class="overlay"><div class="modal">
+  <div class="modal-title">Nueva alumna</div>
+  <div class="form-grid">
+    <div class="form-group"><label>Nombre completo</label><input id="a-nom" placeholder="Valentina García"></div>
+    <div class="form-group"><label>Teléfono</label><input id="a-tel" placeholder="+57 300 000 0000"></div>
+    <div class="form-group"><label>Email</label><input id="a-email" type="email" placeholder="val@mail.com"></div>
+    <div class="form-group"><label>Fecha ingreso</label><input id="a-fecha" type="date"></div>
+    <div class="form-group full"><label>Disciplina principal</label>
+      <select id="a-disc">
+        <option value="Pole">Pole</option>
+        <option value="Acrotelas">Acrotelas</option>
+        <option value="GAP">GAP</option>
+        <option value="Pierna">Pierna</option>
+      </select>
+    </div>
+    <div class="form-group full"><label>Paquete inicial</label>
+      <select id="a-pack">
+        <option value="">Sin paquete aún</option>
+        <option value="8">Pack 8 clases</option>
+        <option value="12">Pack 12 clases</option>
+        <option value="20">Pack 20 clases</option>
+      </select>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn" onclick="hideModal('m-nueva')">Cancelar</button>
+    <button class="btn btn-primary" onclick="addAlumna()">Guardar alumna</button>
+  </div>
+</div></div></div>
+
+<div id="m-pago" class="hidden"><div class="overlay"><div class="modal">
+  <div class="modal-title">Registrar pago</div>
+  <div class="form-grid">
+    <div class="form-group full"><label>Alumna</label><select id="p-alumna"><option value="">Seleccionar...</option></select></div>
+    <div class="form-group full"><label>Paquete</label>
+      <select id="p-pack">
+        <option value="Pack 8 clases|80000|8">Pack 8 clases — $80.000</option>
+        <option value="Pack 12 clases|110000|12" selected>Pack 12 clases — $110.000</option>
+        <option value="Pack 20 clases|170000|20">Pack 20 clases — $170.000</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Fecha de pago</label><input id="p-fecha" type="date"></div>
+    <div class="form-group"><label>Método</label>
+      <select id="p-metodo">
+        <option>Efectivo</option><option>Transferencia</option><option>Nequi</option><option>Daviplata</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Monto cobrado</label><input id="p-monto" type="number" placeholder="110000"></div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn" onclick="hideModal('m-pago')">Cancelar</button>
+    <button class="btn btn-primary" onclick="addPago()">Registrar pago</button>
+  </div>
+</div></div></div>
+
+<div id="m-reserva" class="hidden"><div class="overlay"><div class="modal">
+  <div class="modal-title">Reservar clase</div>
+  <p style="font-size:13px;color:var(--color-text-secondary);margin-bottom:1rem" id="m-reserva-info"></p>
+  <div class="form-grid">
+    <div class="form-group"><label>Disciplina</label>
+      <select id="r-disc">
+        <option>Pole</option><option>Acrotelas</option><option>GAP</option><option>Pierna</option>
+      </select>
+    </div>
+    <div class="form-group"><label>Hora</label>
+      <select id="r-hora">
+        <option>07:00 AM</option><option>09:00 AM</option><option>11:00 AM</option>
+        <option>03:00 PM</option><option>05:00 PM</option><option>07:00 PM</option>
+      </select>
+    </div>
+  </div>
+  <div class="modal-footer">
+    <button class="btn" onclick="hideModal('m-reserva')">Cancelar</button>
+    <button class="btn btn-primary" onclick="confirmarReserva()">Confirmar reserva</button>
+  </div>
+</div></div></div>
+
+</div>
+
+<script>
+const DIAS=['Lun 14','Mar 15','Mié 16','Jue 17','Vie 18','Sáb 19','Dom 20'];
+const DISC_BADGE={'Pole':'b-pole','Acrotelas':'b-acro','GAP':'b-gap','Pierna':'b-pierna'};
+
+const S={
+  alumnas:[
+    {id:1,nombre:'María Pérez',tel:'+57 300 111 2222',email:'maria@mail.com',disciplina:'Pole',paquete:'Pack 12 clases',total:12,usadas:7,vence:'2026-04-30',ingreso:'2025-03-01'},
+    {id:2,nombre:'Laura Gómez',tel:'+57 311 222 3333',email:'laura@mail.com',disciplina:'Acrotelas',paquete:'Pack 8 clases',total:8,usadas:8,vence:'2026-04-10',ingreso:'2025-06-15'},
+    {id:3,nombre:'Sofia Torres',tel:'+57 315 444 5555',email:'sofia@mail.com',disciplina:'GAP',paquete:'Pack 12 clases',total:12,usadas:11,vence:'2026-04-22',ingreso:'2025-11-20'},
+    {id:4,nombre:'Valentina Cruz',tel:'+57 321 555 6666',email:'vale@mail.com',disciplina:'Pierna',paquete:'Pack 20 clases',total:20,usadas:4,vence:'2026-05-20',ingreso:'2026-02-01'},
+  ],
+  pagos:[
+    {fecha:'2026-04-01',alumna:'María Pérez',paquete:'Pack 12 clases',monto:110000,metodo:'Nequi',estado:'Confirmado'},
+    {fecha:'2026-04-03',alumna:'Sofia Torres',paquete:'Pack 12 clases',monto:110000,metodo:'Transferencia',estado:'Confirmado'},
+    {fecha:'2026-03-15',alumna:'Laura Gómez',paquete:'Pack 8 clases',monto:80000,metodo:'Efectivo',estado:'Confirmado'},
+    {fecha:'2026-04-05',alumna:'Valentina Cruz',paquete:'Pack 20 clases',monto:170000,metodo:'Daviplata',estado:'Confirmado'},
+  ],
+  clases:[
+    {alumna:'María Pérez',fecha:'2026-04-07',disc:'Pole',instructor:'Prof. Ramírez',estado:'Asistió'},
+    {alumna:'María Pérez',fecha:'2026-04-09',disc:'Pole',instructor:'Prof. Ramírez',estado:'Asistió'},
+    {alumna:'María Pérez',fecha:'2026-04-11',disc:'Acrotelas',instructor:'Prof. Luna',estado:'Programada'},
+    {alumna:'Laura Gómez',fecha:'2026-04-07',disc:'Acrotelas',instructor:'Prof. Luna',estado:'Asistió'},
+    {alumna:'Sofia Torres',fecha:'2026-04-08',disc:'GAP',instructor:'Prof. Ramírez',estado:'Asistió'},
+    {alumna:'Valentina Cruz',fecha:'2026-04-09',disc:'Pierna',instructor:'Prof. Luna',estado:'Asistió'},
+  ],
+  agenda:{
+    0:[{disc:'Pole',hora:'9AM',slots:6,ocup:4}],
+    1:[{disc:'Acrotelas',hora:'7PM',slots:5,ocup:2}],
+    2:[{disc:'GAP',hora:'10AM',slots:8,ocup:8}],
+    3:[{disc:'Pole',hora:'9AM',slots:6,ocup:3},{disc:'Pierna',hora:'5PM',slots:8,ocup:5}],
+    4:[{disc:'Acrotelas',hora:'7PM',slots:5,ocup:2}],
+    5:[{disc:'Pierna',hora:'10AM',slots:8,ocup:6},{disc:'GAP',hora:'12PM',slots:8,ocup:3}],
+    6:[],
+  },
+  selDay:null,
+  curStudent:0,
+  reservas:{}
+};
+
+function ini(n){return n.split(' ').slice(0,2).map(x=>x[0]).join('').toUpperCase()}
+function fmt(n){return new Intl.NumberFormat('es-CO').format(n)}
+function toast(msg){const t=document.getElementById('toast');t.textContent=msg;t.classList.add('show');setTimeout(()=>t.classList.remove('show'),3200)}
+function showModal(id){document.getElementById(id).classList.remove('hidden');if(id==='m-pago'){const s=document.getElementById('p-alumna');s.innerHTML='<option value="">Seleccionar...</option>';S.alumnas.forEach(a=>s.innerHTML+=`<option>${a.nombre}</option>`);}}
+function hideModal(id){document.getElementById(id).classList.add('hidden')}
+
+function renderAlumnas(){
+  const tb=document.getElementById('tb-alumnas');tb.innerHTML='';
+  S.alumnas.forEach(a=>{
+    const pct=Math.round(a.usadas/a.total*100)||0;
+    let bc='b-active',lbl='Activa';
+    if(a.usadas>=a.total){bc='b-done';lbl='Agotado';}
+    else if(pct>=75){bc='b-low';lbl='Por vencer';}
+    tb.innerHTML+=`<tr>
+      <td><div style="display:flex;align-items:center;gap:7px"><div class="avatar" style="width:26px;height:26px;font-size:10px">${ini(a.nombre)}</div>${a.nombre}</div></td>
+      <td style="color:var(--color-text-secondary)">${a.tel}</td>
+      <td><span class="badge ${DISC_BADGE[a.disciplina]}">${a.disciplina}</span> ${a.paquete}</td>
+      <td style="min-width:90px">${a.usadas}/${a.total}<div class="progress-bar"><div class="progress-fill ${pct>=75?'pf-red':pct>=40?'pf-amber':'pf-green'}" style="width:${pct}%"></div></div></td>
+      <td><span class="badge ${bc}">${lbl}</span></td>
+      <td><button class="btn btn-sm" onclick="verAlumna(${a.id})">Ver</button></td>
+    </tr>`;
+  });
+}
+
+function renderPagos(){
+  const tb=document.getElementById('tb-pagos');tb.innerHTML='';
+  S.pagos.forEach(p=>{
+    tb.innerHTML+=`<tr><td>${p.fecha}</td><td>${p.alumna}</td><td>${p.paquete}</td><td style="font-weight:500">$${fmt(p.monto)}</td><td>${p.metodo}</td><td><span class="badge b-active">${p.estado}</span></td></tr>`;
+  });
+}
+
+function renderAgendaAdmin(){
+  const g=document.getElementById('agenda-admin');g.innerHTML='';
+  DIAS.forEach((d,i)=>{
+    const cs=S.agenda[i]||[];
+    let cls='ds-avail',inner='<div style="font-size:10px;color:var(--color-border-secondary);margin-top:8px">—</div>';
+    if(cs.length){
+      inner='';
+      cs.forEach(c=>{
+        const lleno=c.ocup>=c.slots;
+        if(lleno)cls='ds-full'; else cls='ds-booked';
+        inner+=`<div style="font-size:10px;margin-top:3px"><span class="badge ${DISC_BADGE[c.disc]}" style="font-size:9px;padding:1px 6px">${c.disc}</span></div><div style="font-size:10px;color:var(--color-text-secondary)">${c.hora} · ${c.ocup}/${c.slots}</div>`;
+      });
+    }
+    g.innerHTML+=`<div class="day-slot ${cls}"><div class="day-name">${d}</div>${inner}</div>`;
+  });
+}
+
+function renderAgendaStudent(){
+  const g=document.getElementById('agenda-student');g.innerHTML='';
+  const a=S.alumnas[S.curStudent];
+  const rest=a.total-a.usadas;
+  DIAS.forEach((d,i)=>{
+    const cs=S.agenda[i]||[];
+    const rv=S.reservas[i];
+    let cls='ds-avail',inner='<div style="font-size:10px;color:var(--color-border-secondary);margin-top:8px">Libre</div>';
+    if(rv){cls='ds-booked';inner=`<div style="font-size:10px;margin-top:3px;color:#72243E;font-weight:500">Reservado</div><div style="font-size:10px;color:#993556">${rv.disc} ${rv.hora}</div>`;}
+    else if(cs.length){
+      const c=cs[0];const lleno=c.ocup>=c.slots;
+      cls=lleno?'ds-full':'ds-avail';
+      inner=`<div style="font-size:10px;margin-top:3px"><span class="badge ${DISC_BADGE[c.disc]}" style="font-size:9px;padding:1px 5px">${c.disc}</span></div><div style="font-size:10px;color:var(--color-text-secondary)">${c.hora}</div>`;
+    }
+    const click=!rv&&rest>0&&cls!=='ds-full';
+    g.innerHTML+=`<div class="day-slot ${cls}" onclick="${click?`bookDay(${i},'${d}')`:''}" style="${!click?'cursor:default':''}"><div class="day-name">${d}</div>${inner}</div>`;
+  });
+}
+
+function renderMisClases(){
+  const tb=document.getElementById('tb-mis-clases');
+  const a=S.alumnas[S.curStudent];
+  const cs=S.clases.filter(c=>c.alumna===a.nombre);
+  tb.innerHTML='';
+  cs.forEach(c=>{
+    const bc=c.estado==='Asistió'?'b-active':c.estado==='Programada'?'b-sched':'b-done';
+    tb.innerHTML+=`<tr><td>${c.fecha}</td><td><span class="badge ${DISC_BADGE[c.disc]||''}">${c.disc}</span></td><td>${c.instructor}</td><td><span class="badge ${bc}">${c.estado}</span></td></tr>`;
+  });
+}
+
+function renderStudentInfo(){
+  const a=S.alumnas[S.curStudent];
+  document.getElementById('s-name').textContent=a.nombre;
+  document.getElementById('s-avatar').textContent=ini(a.nombre);
+  document.getElementById('s-sub').textContent=`Alumna activa · ${a.disciplina}`;
+  document.getElementById('pack-name-disp').textContent=a.paquete;
+  document.getElementById('pack-used').textContent=`${a.usadas} / ${a.total}`;
+  document.getElementById('pack-vence').textContent=a.vence;
+  const pct=Math.round(a.usadas/a.total*100)||0;
+  const bar=document.getElementById('pack-bar');
+  bar.style.width=pct+'%';bar.className='progress-fill '+(pct>=75?'pf-red':pct>=40?'pf-amber':'pf-green');
+  const rest=a.total-a.usadas;
+  document.getElementById('s-restantes').textContent=`${rest} clase${rest!==1?'s':''} disponible${rest!==1?'s':''}`;
+  renderMisClases();renderAgendaStudent();
+}
+
+function renderStudentSelector(){
+  const sel=document.getElementById('s-selector');sel.innerHTML='';
+  S.alumnas.forEach((a,i)=>sel.innerHTML+=`<option value="${i}">${a.nombre}</option>`);
+  sel.value=S.curStudent;
+}
+
+function switchStudent(i){S.curStudent=parseInt(i);S.reservas={};renderStudentInfo()}
+
+function switchRole(role,el){
+  document.querySelectorAll('.nav-tab').forEach(t=>t.classList.remove('active'));
+  el.classList.add('active');
+  document.getElementById('panel-admin').classList.toggle('hidden',role!=='admin');
+  document.getElementById('panel-student').classList.toggle('hidden',role!=='student');
+  if(role==='admin'){
+    document.getElementById('nav-avatar').textContent='AD';
+    document.getElementById('nav-name').textContent='Administrador';
+  } else {
+    const a=S.alumnas[S.curStudent];
+    document.getElementById('nav-avatar').textContent=ini(a.nombre);
+    document.getElementById('nav-name').textContent=a.nombre;
+    renderStudentSelector();renderStudentInfo();
+  }
+}
+
+function adminTab(tab,el){
+  ['alumnas','pagos','agenda','sheets'].forEach(t=>document.getElementById('tab-'+t).classList.toggle('hidden',t!==tab));
+  document.querySelectorAll('.section-tab').forEach(b=>b.classList.remove('active'));
+  el.classList.add('active');
+  if(tab==='agenda')renderAgendaAdmin();
+}
+
+function addAlumna(){
+  const n=document.getElementById('a-nom').value.trim();
+  const t=document.getElementById('a-tel').value.trim();
+  const e=document.getElementById('a-email').value.trim();
+  const f=document.getElementById('a-fecha').value;
+  const d=document.getElementById('a-disc').value;
+  const pk=document.getElementById('a-pack').value;
+  if(!n||!t){toast('Completa nombre y teléfono');return}
+  const pkMap={'8':'Pack 8 clases','12':'Pack 12 clases','20':'Pack 20 clases'};
+  S.alumnas.push({id:Date.now(),nombre:n,tel:t,email:e,disciplina:d,paquete:pk?pkMap[pk]:'Sin paquete',total:parseInt(pk)||0,usadas:0,vence:'—',ingreso:f});
+  renderAlumnas();hideModal('m-nueva');
+  document.getElementById('m-alumnas').textContent=S.alumnas.length;
+  toast(`Alumna "${n}" registrada · Pendiente sync con Sheets`);
+  ['a-nom','a-tel','a-email'].forEach(id=>document.getElementById(id).value='');
+}
+
+function addPago(){
+  const al=document.getElementById('p-alumna').value;
+  const pk=document.getElementById('p-pack').value.split('|');
+  const f=document.getElementById('p-fecha').value;
+  const met=document.getElementById('p-metodo').value;
+  const m=document.getElementById('p-monto').value||pk[1];
+  if(!al){toast('Selecciona una alumna');return}
+  S.pagos.unshift({fecha:f,alumna:al,paquete:pk[0],monto:parseInt(m),metodo:met,estado:'Confirmado'});
+  const a=S.alumnas.find(x=>x.nombre===al);
+  if(a){const cls=parseInt(pk[2]);a.paquete=pk[0];a.total=cls;a.usadas=0;const exp=new Date();exp.setDate(exp.getDate()+30);a.vence=exp.toISOString().slice(0,10);}
+  renderPagos();renderAlumnas();hideModal('m-pago');
+  toast(`Pago de ${al} registrado · Pendiente sync con Sheets`);
+}
+
+function bookDay(i,dia){
+  const a=S.alumnas[S.curStudent];
+  if(a.usadas>=a.total){toast('No tienes clases disponibles. Renueva tu paquete.');return}
+  S.selDay=i;
+  document.getElementById('m-reserva-info').textContent=`Reservando para ${dia} — ${a.nombre}`;
+  document.getElementById('r-disc').value=a.disciplina;
+  showModal('m-reserva');
+}
+
+function confirmarReserva(){
+  const disc=document.getElementById('r-disc').value;
+  const hora=document.getElementById('r-hora').value;
+  const a=S.alumnas[S.curStudent];
+  S.reservas[S.selDay]={disc,hora};
+  a.usadas+=1;
+  const dateStr='2026-04-'+String(14+S.selDay).padStart(2,'0');
+  S.clases.unshift({alumna:a.nombre,fecha:dateStr,disc,instructor:'Prof. Ramírez',estado:'Programada'});
+  renderStudentInfo();hideModal('m-reserva');
+  toast(`Clase de ${disc} reservada · ${DIAS[S.selDay]} a las ${hora}`);
+}
+
+function verAlumna(id){
+  const idx=S.alumnas.findIndex(a=>a.id===id);
+  if(idx<0)return;
+  S.curStudent=idx;S.reservas={};
+  document.querySelectorAll('.nav-tab')[1].click();
+}
+
+function saveSheetUrl(){
+  const url=document.getElementById('sheets-url').value.trim();
+  if(!url){toast('Ingresa la URL del Web App');return}
+  toast('URL guardada. La app sincronizará con Antologia_DB.');
+}
+
+// Init
+document.getElementById('a-fecha').value=new Date().toISOString().slice(0,10);
+document.getElementById('p-fecha').value=new Date().toISOString().slice(0,10);
+renderAlumnas();renderPagos();
+</script>
