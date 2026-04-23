@@ -174,7 +174,10 @@ function daysDifference(date1, date2) {
 
 // Verificar si una fecha está en el pasado
 function isPastDate(dateString) {
-    const date = new Date(dateString);
+    const iso = normalizeDate(dateString);
+    if (!iso) return false;
+    const [y, m, d] = iso.split('-').map(Number);
+    const date  = new Date(y, m - 1, d); // local, sin conversión UTC
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     return date < today;
@@ -370,12 +373,11 @@ function getCurrentMonth() {
 // Obtener primer y último día del mes
 function getMonthRange(monthString) {
     const [year, month] = monthString.split('-').map(Number);
-    const firstDay = new Date(year, month - 1, 1);
-    const lastDay = new Date(year, month, 0);
-    
+    const lastDay = new Date(year, month, 0).getDate();
+    const mm = String(month).padStart(2, '0');
     return {
-        start: firstDay.toISOString().split('T')[0],
-        end: lastDay.toISOString().split('T')[0]
+        start: `${year}-${mm}-01`,
+        end:   `${year}-${mm}-${String(lastDay).padStart(2, '0')}`
     };
 }
 

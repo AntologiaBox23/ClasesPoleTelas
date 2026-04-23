@@ -38,37 +38,38 @@ const Attendance = (() => {
         const payment = getActivePayment(userId);
         if (!payment) return `<span class="badge bg-secondary">Sin pago</span>`;
 
-        const start = payment.startDate;
-        const end   = payment.endDate;
+        const start = Utils.normalizeDate(payment.startDate) || payment.startDate;
+        const end   = Utils.normalizeDate(payment.endDate)   || payment.endDate;
         const tipo  = payment.paymentType || '';
 
         // Contar asistencias en el período
         const attendsInPeriod = Storage.getAttendance()
             .filter(a => a.userId === userId && a.status === 'presente' && a.date >= start && a.date <= end).length;
 
-        // Días vencido / activo
-        const endDate   = new Date(end   + 'T00:00:00');
-        const todayDate = new Date(today + 'T00:00:00');
-        const diffDays  = Math.floor((todayDate - endDate) / 86400000);
-
+        // Comparar fechas como strings YYYY-MM-DD (evita problemas UTC)
         let vigTag, extraInfo = '';
-        if (diffDays < 0) {
+        if (today < end) {
             vigTag = `<span class="badge bg-success">Vigente hasta ${Utils.formatDate(end)}</span>`;
-        } else if (diffDays === 0) {
+        } else if (today === end) {
             vigTag = `<span class="badge bg-warning text-dark">Vence hoy</span>`;
         } else {
-            vigTag = `<span class="badge bg-danger">Vencida hace ${diffDays} día${diffDays>1?'s':''}</span>`;
-            // Clases después del vencimiento
+            // Calcular días vencido con aritmética de strings evitando UTC
+            const [ey, em, ed] = end.split('-').map(Number);
+            const [ty, tm, td] = today.split('-').map(Number);
+            const endMs   = new Date(ey, em - 1, ed).getTime();
+            const todayMs = new Date(ty, tm - 1, td).getTime();
+            const diffDays = Math.floor((todayMs - endMs) / 86400000);
+            vigTag = `<span class="badge bg-danger">Vencida hace ${diffDays} día${diffDays > 1 ? 's' : ''}</span>`;
             const afterExpiry = Storage.getAttendance()
                 .filter(a => a.userId === userId && a.status === 'presente' && a.date > end).length;
             if (afterExpiry > 0)
-                extraInfo = ` · <span class="text-warning small">${afterExpiry} clase${afterExpiry>1?'s':''} tras vencimiento</span>`;
+                extraInfo = ` · <span class="text-warning small">${afterExpiry} clase${afterExpiry > 1 ? 's' : ''} tras vencimiento</span>`;
         }
 
         return `<div class="small lh-sm">
             ${vigTag}
             <div class="text-muted mt-1">${Utils.formatDate(start)} → ${Utils.formatDate(end)} · 
-            <em>${tipo}</em> · <strong>${attendsInPeriod}</strong> asistencia${attendsInPeriod!==1?'s':''}</div>
+            <em>${tipo}</em> · <strong>${attendsInPeriod}</strong> asistencia${attendsInPeriod !== 1 ? 's' : ''}</div>
             ${extraInfo}
         </div>`;
     }
@@ -159,8 +160,7 @@ const Attendance = (() => {
         const tbody = document.getElementById('alertsList');
         if (!tbody) return;
 
-        const today = Utils.getCurrentDate();
-        const todayDate = new Date(today + 'T00:00:00');
+        const today = new Date();
         const users = Users.getActiveUsers().filter(u => u.affiliationType !== 'Entrenador(a)');
 
         const alerts = users.map(user => {
@@ -168,10 +168,13 @@ const Attendance = (() => {
                 .filter(a => a.status === 'presente')
                 .sort((a, b) => b.date.localeCompare(a.date))[0];
 
-            const lastDate = lastAttend ? new Date(lastAttend.date + 'T00:00:00') : null;
-            const daysSince = lastDate
-                ? Math.floor((todayDate - lastDate) / 86400000)
-                : null;
+            let daysSince = null;
+            if (lastAttend) {
+                const [ly, lm, ld] = lastAttend.date.split('-').map(Number);
+                const lastMs  = new Date(ly, lm - 1, ld).getTime();
+                const todayMs = new Date(today.getFullYear(), today.getMonth(), today.getDate()).getTime();
+                daysSince = Math.floor((todayMs - lastMs) / 86400000);
+            }
 
             return { user, lastDate: lastAttend?.date || null, daysSince };
         }).filter(a => a.daysSince === null || a.daysSince > 6)

@@ -130,34 +130,31 @@ const Staff = (() => {
         }
 
         UI.setButtonLoading('saveAllClassesBtn', true);
-        
+        let saved = 0;
         try {
-            // Guardar todas las clases
             for (const c of classQueue) {
                 await Storage.addClass({
-                    date: c.date,
-                    hour: c.hour,
+                    date:      c.date,
+                    hour:      c.hour,
                     trainerId: c.trainerId,
                     classType: c.classType,
-                    duration: c.duration
+                    duration:  c.duration
                 });
+                saved++;
             }
 
             const totalHours = classQueue.reduce((sum, c) => sum + c.duration, 0);
-            UI.showSuccessToast(`✓ ${classQueue.length} clases guardadas · ${totalHours.toFixed(1)} horas totales`);
+            UI.showSuccessToast(`✓ ${saved} clases guardadas · ${totalHours.toFixed(1)} horas totales`);
 
-            // Limpiar cola y formulario
             classQueue = [];
             renderQueue();
             document.getElementById('classForm')?.reset();
             document.getElementById('classDate').value = Utils.getCurrentDate();
-            
-            // Refrescar historial
             renderClasses();
 
         } catch (err) {
             console.error(err);
-            UI.showErrorToast('Error al guardar clases');
+            UI.showErrorToast(`Error al guardar (${saved}/${classQueue.length} guardadas): ${err.message}`);
         } finally {
             UI.setButtonLoading('saveAllClassesBtn', false);
         }
@@ -207,9 +204,14 @@ const Staff = (() => {
 
     function deleteClass(id) {
         UI.showConfirmModal('Eliminar registro', '¿Eliminar esta clase del historial?', async () => {
-            await Storage.deleteClass(id);
-            UI.showSuccessToast('Registro eliminado');
-            renderClasses();
+            try {
+                await Storage.deleteClass(id);
+                UI.showSuccessToast('Registro eliminado');
+                renderClasses();
+            } catch (err) {
+                console.error(err);
+                UI.showErrorToast('Error al eliminar: ' + err.message);
+            }
         }, true);
     }
 

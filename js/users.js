@@ -170,7 +170,7 @@ const Users = (() => {
             if (currentStatusFilter)      ok = ok && u.status === currentStatusFilter;
             if (currentAffiliationFilter) ok = ok && u.affiliationType === currentAffiliationFilter;
             return ok;
-        }).sort((a, b) => a.name.localeCompare(b.name));
+        }).sort((a, b) => (a.name || '').localeCompare(b.name || ''));
 
         const start     = (currentPage - 1) * itemsPerPage;
         const paginated = filteredUsers.slice(start, start + itemsPerPage);

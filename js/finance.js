@@ -187,9 +187,13 @@ const Finance = (() => {
 
     function deleteExpense(id) {
         UI.showConfirmModal('Eliminar Gasto', '¿Eliminar este gasto?', async () => {
-            await Storage.deleteExpense(id);
-            UI.showSuccessToast('Gasto eliminado');
-            renderSummary(); renderExpenses(); renderFinancialReport();
+            try {
+                await Storage.deleteExpense(id);
+                UI.showSuccessToast('Gasto eliminado');
+                renderSummary(); renderExpenses(); renderFinancialReport();
+            } catch (err) {
+                UI.showErrorToast('Error al eliminar: ' + err.message);
+            }
         }, true);
     }
 

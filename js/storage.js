@@ -27,8 +27,7 @@ const Storage = (() => {
         income:     null,
         expenses:   null,
         classes:    null,
-        settings:   null,
-        dirty:      { users: false, attendance: false, income: false }
+        settings:   null
     };
 
     // Settings siempre en localStorage (son preferencias del navegador, no datos)
@@ -42,12 +41,9 @@ const Storage = (() => {
             throw new Error('⚙️ Configura SCRIPT_URL en storage.js primero.');
         }
 
-        // Usamos GET con el payload en base64 para evitar CORS preflight.
-        // Apps Script siempre permite GET desde cualquier origen.
         const data   = encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(payload)))));
         const url    = `${SCRIPT_URL}?action=${action}&payload=${data}`;
 
-        // Timeout de 15 segundos para evitar que la app quede bloqueada
         const controller = new AbortController();
         const timeoutId  = setTimeout(() => controller.abort(), 15000);
 
@@ -67,13 +63,11 @@ const Storage = (() => {
         }
         clearTimeout(timeoutId);
 
-        if (!res.ok) throw new Error(`HTTP ${res.status}`);
+        if (!res.ok) throw new Error(`Error del servidor: HTTP ${res.status}`);
 
-        // Apps Script a veces devuelve text/html envolviendo el JSON
         const text = await res.text();
         let json;
         try {
-            // Extraer el primer objeto JSON válido del texto
             const match = text.match(/\{[\s\S]*\}/);
             if (!match) throw new Error('Sin respuesta JSON');
             json = JSON.parse(match[0]);
@@ -81,7 +75,8 @@ const Storage = (() => {
             throw new Error('Respuesta inválida del servidor: ' + text.substring(0, 100));
         }
 
-        if (json.error) throw new Error(json.error);
+        if (json.error)            throw new Error(json.error);
+        if (json.success === false) throw new Error(json.message || 'El servidor reportó un error.');
         return json.data;
     }
 
@@ -105,11 +100,11 @@ const Storage = (() => {
                 apiCall('getExpenses'),
                 apiCall('getClasses')
             ]);
-            cache.users      = users      || [];
-            cache.attendance = attendance || [];
-            cache.income     = income     || [];
-            cache.expenses   = expenses   || [];
-            cache.classes    = classes    || [];
+            cache.users      = Array.isArray(users)      ? users      : [];
+            cache.attendance = Array.isArray(attendance) ? attendance : [];
+            cache.income     = Array.isArray(income)     ? income     : [];
+            cache.expenses   = Array.isArray(expenses)   ? expenses   : [];
+            cache.classes    = Array.isArray(classes)    ? classes    : [];
         } catch (err) {
             console.error('Error cargando datos desde Sheets:', err.message);
             cache.users      = cache.users      || [];
@@ -157,15 +152,17 @@ const Storage = (() => {
     }
 
     async function deleteUser(id) {
-        await apiCall('deleteRow', { sheet: 'Usuarios', id });
-        cache.users      = cache.users.filter(u => u.id !== id);
-        cache.attendance = cache.attendance.filter(a => a.userId !== id);
-        cache.income     = cache.income.filter(i => i.userId !== id);
-        // Borrar también en Sheets
+        // Primero borrar registros relacionados en paralelo
         await Promise.all([
             apiCall('deleteByField', { sheet: 'Asistencia', field: 'userId', value: id }),
             apiCall('deleteByField', { sheet: 'Ingresos',   field: 'userId', value: id })
         ]);
+        // Luego borrar el usuario
+        await apiCall('deleteRow', { sheet: 'Usuarios', id });
+        // Actualizar caché local
+        cache.users      = cache.users.filter(u => u.id !== id);
+        cache.attendance = cache.attendance.filter(a => a.userId !== id);
+        cache.income     = cache.income.filter(i => i.userId !== id);
         return true;
     }
 
@@ -328,7 +325,16 @@ const Storage = (() => {
     function getClasses() { return cache.classes || []; }
 
     async function addClass(classData) {
-        const newClass = { id: Utils.generateUUID(), ...classData, createdAt: Utils.getCurrentDateTime() };
+        const newClass = {
+            id:        Utils.generateUUID(),
+            date:      classData.date      || '',
+            hour:      classData.hour      || '',
+            trainerId: classData.trainerId || '',
+            classType: classData.classType || '',
+            duration:  classData.duration  || 0,
+            payment:   classData.payment   || 0,
+            createdAt: Utils.getCurrentDateTime()
+        };
         await apiCall('addRow', { sheet: 'Clases', row: newClass });
         cache.classes.push(newClass);
         return newClass;

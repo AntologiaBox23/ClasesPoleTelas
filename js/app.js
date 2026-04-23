@@ -303,9 +303,13 @@ async function initializeApp() {
     // Errores globales no capturados
     window.addEventListener('error', (e) => {
         console.error('Error global:', e.error);
+        if (window.UI) UI.showErrorToast('Error inesperado: ' + (e.message || 'desconocido'));
     });
     window.addEventListener('unhandledrejection', (e) => {
         console.error('Promesa rechazada:', e.reason);
+        const msg = e.reason?.message || String(e.reason) || 'Error de red o servidor';
+        if (window.UI) UI.showErrorToast('Error: ' + msg);
+        e.preventDefault();
     });
 })();
 
