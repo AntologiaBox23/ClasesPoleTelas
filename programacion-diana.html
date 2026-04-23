@@ -499,11 +499,30 @@ document.addEventListener('DOMContentLoaded', () => {
 async function gasCall(action, payload={}) {
     const data = encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(payload)))));
     const url  = `${SCRIPT_URL}?action=${action}&payload=${data}`;
-    const res  = await fetch(url, { redirect:'follow' });
-    const text = await res.text();
-    const m    = text.match(/\{[\s\S]*\}/);
-    if (m) return JSON.parse(m[0]);
-    throw new Error('Respuesta inválida');
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15000);
+
+    let res;
+    try {
+        res = await fetch(url, { redirect: 'follow', signal: controller.signal });
+    } catch (err) {
+        clearTimeout(timer);
+        if (err.name === 'AbortError') throw new Error('Tiempo de espera agotado. Revisa tu conexión.');
+        throw err;
+    }
+    clearTimeout(timer);
+
+    if (!res.ok) throw new Error(`Error del servidor: HTTP ${res.status}`);
+
+    const text  = await res.text();
+    const m     = text.match(/\{[\s\S]*\}/);
+    if (!m) throw new Error('Respuesta inválida del servidor.');
+
+    const json = JSON.parse(m[0]);
+    if (json.error)            throw new Error(json.error);
+    if (json.success === false) throw new Error(json.message || 'El servidor reportó un error.');
+    return json;
 }
 
 async function loadBookings() {
@@ -515,33 +534,33 @@ async function loadBookings() {
 }
 
 // ══════════════════════════════════════════
-//  INFERIR MEMBRESÍA
+//  VERIFICAR MEMBRESÍA
 //  1° busca en hoja Membresias (checkMembership)
 //  2° fallback: último ingreso tipo Diana en hoja Ingresos
 //  Si encuentra en Ingresos y no en Membresias → auto-registra
 // ══════════════════════════════════════════
 async function resolverMembresia(userId, userDoc) {
-    // Intento 1: hoja Membresias
+    // Intento 1: hoja Membresias (checkMembership en backend)
     try {
         const r = await gasCall('checkMembership', { userId, userDoc });
-        if (r.canBook || r.membership) return r;
+        if (r.canBook || (r.membership && r.membership)) return r;
     } catch(e) {}
 
-    // Intento 2: hoja Ingresos
+    // Intento 2: fallback por ingresos (solo si checkMembership falló o no encontró)
     try {
-        const incR  = await gasCall('getIncome');
+        const incR   = await gasCall('getIncome');
         const todos  = incR.data || [];
-        const docClean = (userDoc||'').replace(/\D/g,'');
+        const docClean = (userDoc || '').replace(/\D/g, '');
 
         const mios = todos.filter(p => {
             const pUid  = p.userId || '';
-            const pDoc  = (p.userDoc||p.document||p.notes||'').replace(/\D/g,'');
-            const byId  = userId  && pUid  === userId;
-            const byDoc = docClean && (pDoc === docClean || (pUid||'').replace(/\D/g,'') === docClean);
+            const pDoc  = (p.userDoc || p.document || p.notes || '').replace(/\D/g, '');
+            const byId  = userId   && pUid === userId;
+            const byDoc = docClean && (pDoc === docClean || (pUid || '').replace(/\D/g, '') === docClean);
             const tipoOk = DIANA_INCOME_TYPES.some(t =>
-                (p.paymentType||'').toLowerCase().includes(t)
+                (p.paymentType || '').toLowerCase().includes(t)
             );
-            return (byId||byDoc) && tipoOk;
+            return (byId || byDoc) && tipoOk;
         });
 
         if (!mios.length) {
@@ -550,36 +569,34 @@ async function resolverMembresia(userId, userDoc) {
                 membership:null };
         }
 
-        // Ordenar por endDate más reciente
-        mios.sort((a,b) => new Date(b.endDate||'2000-01-01') - new Date(a.endDate||'2000-01-01'));
+        mios.sort((a, b) => new Date(b.endDate || '2000-01-01') - new Date(a.endDate || '2000-01-01'));
         const ult = mios[0];
-        const hoy = new Date(); hoy.setHours(0,0,0,0);
-        const fin = ult.endDate ? new Date(ult.endDate+'T12:00:00') : null;
+        const hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+        const fin = ult.endDate ? new Date(ult.endDate + 'T12:00:00') : null;
         const vigente = fin && fin >= hoy;
 
         if (!vigente) {
-            const finStr = ult.endDate || '?';
             return { success:true, canBook:false,
-                reason:`Plan Diana venció el ${finStr}. Renueva con Diana.`,
+                reason:`Plan Diana venció el ${ult.endDate || '?'}. Renueva con Diana.`,
                 membership:null };
         }
 
-        // Auto-registrar en Membresias (silencioso)
+        // Auto-registrar en Membresias para que la próxima vez use checkMembership (silencioso)
         gasCall('addMembership', {
             userId, userDoc,
-            userName: state.user?.name || '',
-            tipo: 'membresia_mensual',
+            userName:      state.user?.name || '',
+            tipo:          'membresia_mensual',
             vigenciaDesde: ult.startDate || ult.paymentDate || '',
             vigenciaHasta: ult.endDate,
-            estado: 'activa'
-        }).catch(()=>{});
+            estado:        'activa'
+        }).catch(() => {});
 
         return {
             success:true, canBook:true,
             reason:`Plan Diana vigente hasta ${ult.endDate}`,
             membership:{
                 tipo:'membresia_mensual', vigenciaHasta:ult.endDate,
-                vigenciaDesde: ult.startDate||ult.paymentDate||'',
+                vigenciaDesde: ult.startDate || ult.paymentDate || '',
                 clasesTotal:'', clasesUsadas:'', estado:'activa',
                 fromIncome:true
             }
@@ -753,8 +770,13 @@ function buildSummary() {
     const dayLabel = state.selectedDay.charAt(0).toUpperCase()+state.selectedDay.slice(1);
     const dayMap   = {lunes:1,martes:2,'miércoles':3,jueves:4,viernes:5,'sábado':6,domingo:0};
     const today    = new Date();
-    let diff = (dayMap[state.selectedDay]??0)-today.getDay();
-    if (diff<=0) diff+=7;
+    const todayIdx2  = today.getDay();
+    const targetIdx2 = dayMap[state.selectedDay] ?? 0;
+    let diff = targetIdx2 - todayIdx2;
+    if (diff === 0) {
+        const [hh2, mm2] = (state.selectedTime || '00:00').split(':').map(Number);
+        if ((today.getHours() * 60 + today.getMinutes()) >= (hh2 * 60 + mm2)) diff = 7;
+    } else if (diff < 0) { diff += 7; }
     const nextDate = new Date(today); nextDate.setDate(today.getDate()+diff);
     const dateStr  = nextDate.toLocaleDateString('es-CO',{day:'numeric',month:'long',year:'numeric'});
     const memLine  = state.membership
@@ -790,9 +812,20 @@ async function bookClass() {
 
     const dayMap = {lunes:1,martes:2,'miércoles':3,jueves:4,viernes:5,'sábado':6,domingo:0};
     const today  = new Date();
-    let diff = (dayMap[state.selectedDay]??0)-today.getDay();
-    if (diff<=0) diff+=7;
-    const cd = new Date(today); cd.setDate(today.getDate()+diff);
+    const todayIdx  = today.getDay();
+    const targetIdx = dayMap[state.selectedDay] ?? 0;
+    let diff = targetIdx - todayIdx;
+
+    if (diff === 0) {
+        const [hh, mm]    = (state.selectedTime || '00:00').split(':').map(Number);
+        const slotMinutes = hh * 60 + mm;
+        const nowMinutes  = today.getHours() * 60 + today.getMinutes();
+        if (nowMinutes >= slotMinutes) diff = 7;
+    } else if (diff < 0) {
+        diff += 7;
+    }
+
+    const cd = new Date(today); cd.setDate(today.getDate() + diff);
     const classDateStr = cd.toISOString().split('T')[0];
 
     const booking = {

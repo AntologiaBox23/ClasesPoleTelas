@@ -10,19 +10,23 @@
 const SPREADSHEET_ID = '1Q3uao_brBssNkaASs3OBFvtW2J3Of9BflTBHFRqqnR4';
 
 const SHEETS = {
-  USERS:      'Usuarios',
-  ATTENDANCE: 'Asistencia',
-  INCOME:     'Ingresos',
-  EXPENSES:   'Gastos',
-  CLASSES:    'Clases'
+  USERS:         'Usuarios',
+  ATTENDANCE:    'Asistencia',
+  INCOME:        'Ingresos',
+  EXPENSES:      'Gastos',
+  CLASSES:       'Clases',
+  PROGRAMACION:  'Programacion',
+  MEMBRESIAS:    'Membresias'
 };
 
 const COLUMNS = {
-  Usuarios:   ['id','name','document','birthdate','phone','eps','bloodType','pathology','emergencyContact','emergencyPhone','classTime','affiliationType','status','createdAt','updatedAt'],
-  Asistencia: ['id','userId','date','status','time','createdAt'],
-  Ingresos:   ['id','userId','paymentType','amount','paymentMethod','paymentDate','startDate','endDate','notes','createdAt'],
-  Gastos:     ['id','date','description','amount','category','account','createdAt'],
-  Clases:     ['id','date','hour','trainerId','classType','duration','payment','createdAt']
+  Usuarios:      ['id','name','document','birthdate','phone','eps','bloodType','pathology','emergencyContact','emergencyPhone','classTime','affiliationType','status','createdAt','updatedAt'],
+  Asistencia:    ['id','userId','date','status','time','createdAt'],
+  Ingresos:      ['id','userId','paymentType','amount','paymentMethod','paymentDate','startDate','endDate','notes','createdAt'],
+  Gastos:        ['id','date','description','amount','category','account','createdAt'],
+  Clases:        ['id','date','hour','trainerId','classType','duration','payment','createdAt'],
+  Programacion:  ['ID','userId','userName','userDoc','classType','level','day','time','classDate','instructor','status','cancelReason','createdAt','updatedAt'],
+  Membresias:    ['id','userId','userDoc','userName','tipo','vigenciaDesde','vigenciaHasta','estado','createdAt']
 };
 
 // ── HELPERS ──────────────────────────────────────────────────────────────────
@@ -88,17 +92,24 @@ function doPost(e) {
 
 function dispatch(action, payload) {
   switch (action) {
-    case 'getUsers':      return getAllRows(SHEETS.USERS);
-    case 'getAttendance': return getAllRows(SHEETS.ATTENDANCE);
-    case 'getIncome':     return getAllRows(SHEETS.INCOME);
-    case 'addRow':        return addRow(payload.sheet, payload.row);
-    case 'updateRow':     return updateRow(payload.sheet, payload.id, payload.data);
-    case 'deleteRow':     return deleteRow(payload.sheet, payload.id);
-    case 'deleteByField': return deleteByField(payload.sheet, payload.field, payload.value);
-    case 'importAll':     return importAll(payload);
-    case 'getExpenses':   return getAllRows(SHEETS.EXPENSES);
-    case 'getClasses':    return getAllRows(SHEETS.CLASSES);
-    case 'clearAll':      return clearAll();
+    case 'getUsers':         return getAllRows(SHEETS.USERS);
+    case 'getAttendance':    return getAllRows(SHEETS.ATTENDANCE);
+    case 'getIncome':        return getAllRows(SHEETS.INCOME);
+    case 'addRow':           return addRow(payload.sheet, payload.row);
+    case 'updateRow':        return updateRow(payload.sheet, payload.id, payload.data);
+    case 'deleteRow':        return deleteRow(payload.sheet, payload.id);
+    case 'deleteByField':    return deleteByField(payload.sheet, payload.field, payload.value);
+    case 'importAll':        return importAll(payload);
+    case 'getExpenses':      return getAllRows(SHEETS.EXPENSES);
+    case 'getClasses':       return getAllRows(SHEETS.CLASSES);
+    case 'clearAll':         return clearAll();
+    // ── Programación de clases ──────────────────────────────────────────
+    case 'getProgramacion':  return getProgramacion(payload);
+    case 'addClass':         return addClassBooking(payload);
+    case 'cancelClass':      return cancelClass(payload);
+    case 'getUserClasses':   return getUserClasses(payload);
+    case 'checkMembership':  return checkMembership(payload);
+    case 'addMembership':    return addMembership(payload);
     default: throw new Error('Acción desconocida: ' + action);
   }
 }
@@ -107,11 +118,13 @@ function dispatch(action, payload) {
 
 // Columnas que contienen fechas en cada hoja
 var DATE_COLUMNS = {
-  Usuarios:   ['birthdate', 'createdAt', 'updatedAt'],
-  Asistencia: ['date', 'createdAt'],
-  Ingresos:   ['paymentDate', 'startDate', 'endDate', 'createdAt'],
-  Gastos:     ['date', 'createdAt'],
-  Clases:     ['date', 'createdAt']
+  Usuarios:     ['birthdate', 'createdAt', 'updatedAt'],
+  Asistencia:   ['date', 'createdAt'],
+  Ingresos:     ['paymentDate', 'startDate', 'endDate', 'createdAt'],
+  Gastos:       ['date', 'createdAt'],
+  Clases:       ['date', 'createdAt'],
+  Programacion: ['classDate', 'createdAt', 'updatedAt'],
+  Membresias:   ['vigenciaDesde', 'vigenciaHasta', 'createdAt']
 };
 
 // Columnas que contienen valores numéricos (NO deben convertirse a fecha)
@@ -317,6 +330,233 @@ function clearAll() {
   return true;
 }
 
+// ── PROGRAMACIÓN DE CLASES ───────────────────────────────────────────────────
+
+/**
+ * Devuelve todas las reservas. Si se pasa payload.classType, filtra por tipo.
+ */
+function getProgramacion(payload) {
+  var rows = getAllRows(SHEETS.PROGRAMACION);
+  if (payload && payload.classType) {
+    rows = rows.filter(function(r) { return r.classType === payload.classType; });
+  }
+  return { classes: rows };
+}
+
+/**
+ * Crea una nueva reserva de clase.
+ * Verifica que el alumno no tenga ya una reserva activa en el mismo horario.
+ */
+function addClassBooking(payload) {
+  var sheet   = getOrCreateSheet(SHEETS.PROGRAMACION);
+  var allRows = getAllRows(SHEETS.PROGRAMACION);
+
+  // Evitar doble reserva: mismo usuario, mismo día, misma hora, mismo tipo, estado activo
+  var duplicate = allRows.filter(function(r) {
+    return r.userId    === payload.userId    &&
+           r.classType === payload.classType &&
+           r.day       === payload.day       &&
+           r.time      === payload.time      &&
+           r.classDate === payload.classDate &&
+           r.status    !== 'cancelada';
+  });
+  if (duplicate.length > 0) {
+    throw new Error('Ya tienes una reserva para ese horario.');
+  }
+
+  // Verificar cupo disponible
+  var MAX_PER_SLOT = payload.classType === 'semipersonalizado_diana' ? 4 : 6;
+  var taken = allRows.filter(function(r) {
+    return r.classType === payload.classType &&
+           r.day       === payload.day       &&
+           r.time      === payload.time      &&
+           r.classDate === payload.classDate &&
+           r.status    !== 'cancelada';
+  }).length;
+  if (taken >= MAX_PER_SLOT) {
+    throw new Error('Este horario ya está lleno.');
+  }
+
+  var now       = new Date();
+  var bookingId = 'BK' + now.getTime() + '_' + Math.floor(Math.random() * 1000);
+  var nowStr    = Utilities.formatDate(now, Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
+
+  var booking = {
+    ID:           bookingId,
+    userId:       payload.userId       || '',
+    userName:     payload.userName     || '',
+    userDoc:      payload.userDoc      || '',
+    classType:    payload.classType    || '',
+    level:        payload.level        || '',
+    day:          payload.day          || '',
+    time:         payload.time         || '',
+    classDate:    payload.classDate    || '',
+    instructor:   payload.instructor   || '',
+    status:       'programada',
+    cancelReason: '',
+    createdAt:    nowStr,
+    updatedAt:    nowStr
+  };
+
+  var headers  = COLUMNS.Programacion;
+  var row      = headers.map(function(col) { return booking[col] !== undefined ? booking[col] : ''; });
+  sheet.appendRow(row);
+
+  return { success: true, bookingId: bookingId };
+}
+
+/**
+ * Cambia el estado de una reserva a 'cancelada'.
+ */
+function cancelClass(payload) {
+  var bookingId = payload.bookingId || payload.ID || '';
+  var reason    = payload.reason    || 'Cancelado por el usuario';
+
+  var sheet   = getOrCreateSheet(SHEETS.PROGRAMACION);
+  var data    = sheet.getDataRange().getValues();
+  var headers = data[0];
+  var idCol   = headers.indexOf('ID');
+  var statCol = headers.indexOf('status');
+  var rsCol   = headers.indexOf('cancelReason');
+  var updCol  = headers.indexOf('updatedAt');
+
+  if (idCol === -1 || statCol === -1) throw new Error('Estructura de hoja Programacion incorrecta.');
+
+  var nowStr = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
+
+  for (var i = 1; i < data.length; i++) {
+    if (String(data[i][idCol]) === String(bookingId)) {
+      sheet.getRange(i + 1, statCol + 1).setValue('cancelada');
+      if (rsCol  !== -1) sheet.getRange(i + 1, rsCol  + 1).setValue(reason);
+      if (updCol !== -1) sheet.getRange(i + 1, updCol + 1).setValue(nowStr);
+      return { success: true };
+    }
+  }
+  throw new Error('Reserva ' + bookingId + ' no encontrada.');
+}
+
+/**
+ * Devuelve las clases de un usuario específico.
+ * Busca por userId (principal) o por userDoc (fallback).
+ */
+function getUserClasses(payload) {
+  var userId  = payload.userId  || '';
+  var userDoc = (payload.userDoc || '').replace(/\D/g, '');
+  var rows    = getAllRows(SHEETS.PROGRAMACION);
+
+  var clases = rows.filter(function(r) {
+    var byId  = userId  && r.userId === userId;
+    var byDoc = userDoc && (r.userDoc || '').replace(/\D/g, '') === userDoc;
+    return byId || byDoc;
+  });
+
+  // Ordenar: programadas primero, luego por fecha desc
+  clases.sort(function(a, b) {
+    if (a.status === 'programada' && b.status !== 'programada') return -1;
+    if (b.status === 'programada' && a.status !== 'programada') return  1;
+    return (b.classDate || '') > (a.classDate || '') ? 1 : -1;
+  });
+
+  return { classes: clases };
+}
+
+/**
+ * Verifica si un usuario tiene membresía activa.
+ * Busca en la hoja Membresias por userId o userDoc.
+ */
+function checkMembership(payload) {
+  var userId  = payload.userId  || '';
+  var userDoc = (payload.userDoc || '').replace(/\D/g, '');
+  var rows    = getAllRows(SHEETS.MEMBRESIAS);
+
+  var mias = rows.filter(function(r) {
+    var byId  = userId  && r.userId  === userId;
+    var byDoc = userDoc && (r.userDoc || '').replace(/\D/g, '') === userDoc;
+    return (byId || byDoc) && r.estado === 'activa';
+  });
+
+  if (!mias.length) {
+    return { success: true, canBook: false, reason: 'Sin membresía activa.', membership: null };
+  }
+
+  // Tomar la más reciente por vigenciaHasta
+  mias.sort(function(a, b) {
+    return (b.vigenciaHasta || '') > (a.vigenciaHasta || '') ? 1 : -1;
+  });
+  var mem = mias[0];
+
+  var hoy = new Date(); hoy.setHours(0, 0, 0, 0);
+  var fin = mem.vigenciaHasta ? new Date(mem.vigenciaHasta + 'T12:00:00') : null;
+
+  if (!fin || fin < hoy) {
+    return {
+      success: true, canBook: false,
+      reason: 'Membresía vencida el ' + (mem.vigenciaHasta || '?') + '.',
+      membership: mem
+    };
+  }
+
+  return {
+    success: true, canBook: true,
+    reason: 'Plan activo hasta ' + mem.vigenciaHasta,
+    membership: mem
+  };
+}
+
+/**
+ * Registra o actualiza una membresía en la hoja Membresias.
+ * Si ya existe una activa para ese usuario, actualiza en lugar de duplicar.
+ */
+function addMembership(payload) {
+  var sheet   = getOrCreateSheet(SHEETS.MEMBRESIAS);
+  var rows    = getAllRows(SHEETS.MEMBRESIAS);
+  var userId  = payload.userId  || '';
+  var userDoc = (payload.userDoc || '').replace(/\D/g, '');
+  var nowStr  = Utilities.formatDate(new Date(), Session.getScriptTimeZone(), 'yyyy-MM-dd HH:mm:ss');
+
+  // Buscar si ya existe membresía activa para este usuario
+  var existing = rows.filter(function(r) {
+    var byId  = userId  && r.userId  === userId;
+    var byDoc = userDoc && (r.userDoc || '').replace(/\D/g, '') === userDoc;
+    return (byId || byDoc) && r.estado === 'activa';
+  });
+
+  if (existing.length > 0) {
+    // Actualizar la más reciente
+    existing.sort(function(a, b) {
+      return (b.vigenciaHasta || '') > (a.vigenciaHasta || '') ? 1 : -1;
+    });
+    var toUpdate = existing[0];
+    var updates  = {
+      vigenciaDesde: payload.vigenciaDesde || toUpdate.vigenciaDesde,
+      vigenciaHasta: payload.vigenciaHasta || toUpdate.vigenciaHasta,
+      estado:        payload.estado        || 'activa',
+      tipo:          payload.tipo          || toUpdate.tipo
+    };
+    updateRow(SHEETS.MEMBRESIAS, toUpdate.id, Object.assign({}, toUpdate, updates));
+    return { success: true, updated: true };
+  }
+
+  // Crear nueva membresía
+  var newMem = {
+    id:            'MEM' + new Date().getTime(),
+    userId:        userId,
+    userDoc:       payload.userDoc  || '',
+    userName:      payload.userName || '',
+    tipo:          payload.tipo          || 'membresia_mensual',
+    vigenciaDesde: payload.vigenciaDesde || '',
+    vigenciaHasta: payload.vigenciaHasta || '',
+    estado:        payload.estado        || 'activa',
+    createdAt:     nowStr
+  };
+
+  var headers = COLUMNS.Membresias;
+  var row     = headers.map(function(col) { return newMem[col] !== undefined ? newMem[col] : ''; });
+  sheet.appendRow(row);
+
+  return { success: true, updated: false };
+}
+
 // ── UTILIDADES ───────────────────────────────────────────────────────────────
 
 function getOrCreateSheet(name) {
@@ -404,10 +644,14 @@ function testConnection() {
     Logger.log('✅ Pestaña Usuarios: ' + (users.getLastRow() - 1) + ' registros');
     Logger.log('✅ Pestaña Asistencia: ' + (attendance.getLastRow() - 1) + ' registros');
     Logger.log('✅ Pestaña Ingresos: ' + (income.getLastRow() - 1) + ' registros');
-    var expenses = getOrCreateSheet(SHEETS.EXPENSES);
-    var classes  = getOrCreateSheet(SHEETS.CLASSES);
+    var expenses     = getOrCreateSheet(SHEETS.EXPENSES);
+    var classes      = getOrCreateSheet(SHEETS.CLASSES);
+    var programacion = getOrCreateSheet(SHEETS.PROGRAMACION);
+    var membresias   = getOrCreateSheet(SHEETS.MEMBRESIAS);
     Logger.log('✅ Pestaña Gastos: ' + (expenses.getLastRow() - 1) + ' registros');
     Logger.log('✅ Pestaña Clases: ' + (classes.getLastRow() - 1) + ' registros');
+    Logger.log('✅ Pestaña Programacion: ' + (programacion.getLastRow() - 1) + ' reservas');
+    Logger.log('✅ Pestaña Membresias: ' + (membresias.getLastRow() - 1) + ' registros');
     Logger.log('');
     Logger.log('🎉 Todo OK. Ya puedes desplegar como Web App.');
 

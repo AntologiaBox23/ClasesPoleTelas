@@ -671,11 +671,30 @@ document.addEventListener('DOMContentLoaded', () => {
 async function gasCall(action, payload={}) {
     const data = encodeURIComponent(btoa(unescape(encodeURIComponent(JSON.stringify(payload)))));
     const url  = `${SCRIPT_URL}?action=${action}&payload=${data}`;
-    const res  = await fetch(url, { redirect: 'follow' });
-    const text = await res.text();
+
+    const controller = new AbortController();
+    const timer = setTimeout(() => controller.abort(), 15000);
+
+    let res;
+    try {
+        res = await fetch(url, { redirect: 'follow', signal: controller.signal });
+    } catch (err) {
+        clearTimeout(timer);
+        if (err.name === 'AbortError') throw new Error('Tiempo de espera agotado. Revisa tu conexión.');
+        throw err;
+    }
+    clearTimeout(timer);
+
+    if (!res.ok) throw new Error(`Error del servidor: HTTP ${res.status}`);
+
+    const text  = await res.text();
     const match = text.match(/\{[\s\S]*\}/);
-    if (match) return JSON.parse(match[0]);
-    throw new Error('Respuesta inválida');
+    if (!match) throw new Error('Respuesta inválida del servidor.');
+
+    const json = JSON.parse(match[0]);
+    if (json.error)            throw new Error(json.error);
+    if (json.success === false) throw new Error(json.message || 'El servidor reportó un error.');
+    return json;
 }
 
 async function loadBookings() {
@@ -889,10 +908,15 @@ function buildSummary() {
     const dayLabel = state.selectedDay.charAt(0).toUpperCase() + state.selectedDay.slice(1);
     const dayMap   = {lunes:1,martes:2,'miércoles':3,jueves:4,viernes:5,'sábado':6,domingo:0};
     const today    = new Date();
-    const todayIdx = today.getDay();
-    const targetIdx = dayMap[state.selectedDay] ?? 0;
-    let daysAhead = targetIdx - todayIdx;
-    if (daysAhead <= 0) daysAhead += 7;
+    const todayIdx2  = today.getDay();
+    const targetIdx2 = dayMap[state.selectedDay] ?? 0;
+    let daysAhead = targetIdx2 - todayIdx2;
+    if (daysAhead === 0) {
+        const [hh2, mm2] = (state.selectedTime || '00:00').split(':').map(Number);
+        if ((today.getHours() * 60 + today.getMinutes()) >= (hh2 * 60 + mm2)) daysAhead = 7;
+    } else if (daysAhead < 0) {
+        daysAhead += 7;
+    }
     const nextDate = new Date(today);
     nextDate.setDate(today.getDate() + daysAhead);
     const dateStr = nextDate.toLocaleDateString('es-CO', {day:'numeric',month:'long',year:'numeric'});
@@ -935,8 +959,20 @@ async function bookClass() {
     // Calcular fecha real de la clase
     const dayMap  = {lunes:1,martes:2,'miércoles':3,jueves:4,viernes:5,'sábado':6,domingo:0};
     const today   = new Date();
-    let diff = (dayMap[state.selectedDay]??0) - today.getDay();
-    if (diff <= 0) diff += 7;
+    const todayIdx   = today.getDay();
+    const targetIdx  = dayMap[state.selectedDay] ?? 0;
+    let diff = targetIdx - todayIdx;
+
+    if (diff === 0) {
+        // Mismo día: reservar hoy solo si la hora del slot aún no pasó
+        const [hh, mm]    = (state.selectedTime || '00:00').split(':').map(Number);
+        const slotMinutes = hh * 60 + mm;
+        const nowMinutes  = today.getHours() * 60 + today.getMinutes();
+        if (nowMinutes >= slotMinutes) diff = 7;
+    } else if (diff < 0) {
+        diff += 7;
+    }
+
     const classDate = new Date(today);
     classDate.setDate(today.getDate() + diff);
     const classDateStr = classDate.toISOString().split('T')[0];
@@ -957,7 +993,7 @@ async function bookClass() {
         const json = await gasCall('addClass', booking);
         if (json.success === false) throw new Error(json.message || 'Error');
 
-        state.bookings.push({ ...booking, status:'programada', id: json.bookingId||'' });
+        state.bookings.push({ ...booking, status:'programada', ID: json.bookingId||'' });
         document.getElementById('successMsg').textContent =
             `${state.user.name}, ¡listo! Quedaste en ${CLASS_LABELS[state.classType]} (${state.level}) el ${state.selectedDay} a las ${state.selectedTime}.`;
         goStep(5);
