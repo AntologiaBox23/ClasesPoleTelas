@@ -37,7 +37,7 @@ const Storage = (() => {
     // ─── HELPERS HTTP ────────────────────────────────────────────────────────
 
     async function apiCall(action, payload = {}) {
-        if (!SCRIPT_URL || SCRIPT_URL === 'PEGA_AQUI_TU_URL_DE_APPS_SCRIPT') {
+        if (!SCRIPT_URL || SCRIPT_URL === 'https://script.google.com/macros/s/AKfycbwfqEAqBVHtN7ddD6wYdITsYKr3EQx4PTnLfwkzwnZc1_ndtfuUn5_kIf3OvzLHJ7WS6w/exec') {
             throw new Error('⚙️ Configura SCRIPT_URL en storage.js primero.');
         }
 
